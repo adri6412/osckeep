@@ -29,12 +29,23 @@ body {
 /* Mobile optimizations */
 @media (max-width: 768px) {
   body {
-    font-size: 14px;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
   }
   
   /* Previene overflow orizzontale */
   * {
     max-width: 100%;
+  }
+  
+  /* Aumenta dimensioni touch target */
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  input, textarea {
+    font-size: 16px !important; /* Previene zoom automatico su iOS */
   }
 }
 
