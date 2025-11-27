@@ -1,6 +1,6 @@
-# Google Keep Clone
+# OscKeep
 
-This project is a Google Keep clone with a Node.js server, React web client, and Android client source code.
+This project is a note-taking application (OscKeep) with a Node.js server, React web client, and Android client source code.
 
 ## Project Structure
 

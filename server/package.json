@@ -1,7 +1,7 @@
 {
-  "name": "google-keep-clone-server",
+  "name": "osckeep-server",
   "version": "1.0.0",
-  "description": "Server for Google Keep Clone",
+  "description": "Server for OscKeep",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

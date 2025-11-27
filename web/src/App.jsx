@@ -58,7 +58,7 @@ function App() {
           <button className="p-3 rounded-full hover:bg-keep-hover"><FaBars /></button>
           <div className="flex items-center gap-2">
             <img src="https://www.gstatic.com/images/branding/product/1x/keep_2020q4_48dp.png" alt="Keep" className="h-10 w-10" />
-            <span className="text-xl text-gray-300">Keep</span>
+            <span className="text-xl text-gray-300">OscKeep</span>
           </div>
         </div>
 
