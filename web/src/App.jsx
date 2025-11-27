@@ -32,8 +32,11 @@ function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchNotes();
-  }, [activeSection]);
+    let filter = 'all';
+    if (activeSection === 'archive') filter = 'archived';
+    else if (activeSection === 'trash') filter = 'trash';
+    else if (activeSection === 'reminders') filter = 'reminders';
+    fetchNotes(filter);
   }, [activeSection]);
 
   const fetchNotes = async (filter = 'all') => {
