@@ -63,6 +63,28 @@ app.delete('/users/:id', verifyToken, verifyAdmin, (req, res) => {
     });
 });
 
+// Change user password (Admin can change anyone's, User can change their own)
+app.put('/users/:id/password', verifyToken, async (req, res) => {
+    const targetUserId = parseInt(req.params.id);
+    const { password } = req.body;
+
+    // Check authorization: Admin can change anyone's password, User can only change their own
+    if (req.user.role !== 'admin' && req.user.id !== targetUserId) {
+        return res.status(403).json({ error: 'Forbidden: You can only change your own password' });
+    }
+
+    if (!password || password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, targetUserId], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        if (this.changes === 0) return res.status(404).json({ error: 'User not found' });
+        res.json({ message: "Password updated successfully" });
+    });
+});
+
 // --- NOTES (Protected) ---
 
 // Get all notes (User sees only their own)

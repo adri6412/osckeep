@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaTrash, FaUserPlus, FaArrowLeft } from 'react-icons/fa';
+import { FaTrash, FaUserPlus, FaArrowLeft, FaKey } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const AdminPage = () => {
     const [users, setUsers] = useState([]);
     const [newUser, setNewUser] = useState({ username: '', password: '', role: 'user' });
+    const [passwordModal, setPasswordModal] = useState({ open: false, userId: null, username: '' });
+    const [newPassword, setNewPassword] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -41,6 +43,23 @@ const AdminPage = () => {
             } catch (error) {
                 console.error("Error deleting user", error);
             }
+        }
+    };
+
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+        if (newPassword.length < 6) {
+            alert('Password must be at least 6 characters');
+            return;
+        }
+        try {
+            await axios.put(`/api/users/${passwordModal.userId}/password`, { password: newPassword });
+            setPasswordModal({ open: false, userId: null, username: '' });
+            setNewPassword('');
+            alert('Password updated successfully');
+        } catch (error) {
+            console.error("Error changing password", error);
+            alert("Failed to change password");
         }
     };
 
@@ -112,13 +131,23 @@ const AdminPage = () => {
                                     </td>
                                     <td className="p-4 text-keep-muted text-sm">{new Date(user.created_at).toLocaleDateString()}</td>
                                     <td className="p-4">
-                                        <button
-                                            onClick={() => handleDeleteUser(user.id)}
-                                            className="text-red-400 hover:text-red-300 p-2 hover:bg-red-500/10 rounded"
-                                            disabled={user.username === 'admin'} // Prevent deleting default admin
-                                        >
-                                            <FaTrash />
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setPasswordModal({ open: true, userId: user.id, username: user.username })}
+                                                className="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-500/10 rounded"
+                                                title="Change Password"
+                                            >
+                                                <FaKey />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteUser(user.id)}
+                                                className="text-red-400 hover:text-red-300 p-2 hover:bg-red-500/10 rounded"
+                                                disabled={user.username === 'admin'} // Prevent deleting default admin
+                                                title="Delete User"
+                                            >
+                                                <FaTrash />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -126,6 +155,47 @@ const AdminPage = () => {
                     </table>
                 </div>
             </div>
+
+            {/* Password Change Modal */}
+            {passwordModal.open && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-keep-card p-6 rounded-xl border border-keep-border w-full max-w-md">
+                        <h2 className="text-xl font-semibold mb-4">Change Password for {passwordModal.username}</h2>
+                        <form onSubmit={handleChangePassword} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-keep-muted mb-1">New Password</label>
+                                <input
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="w-full bg-keep-bg border border-keep-border rounded px-3 py-2 text-keep-text"
+                                    placeholder="At least 6 characters"
+                                    required
+                                    minLength={6}
+                                />
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setPasswordModal({ open: false, userId: null, username: '' });
+                                        setNewPassword('');
+                                    }}
+                                    className="px-4 py-2 rounded bg-keep-sidebar hover:bg-keep-hover"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500"
+                                >
+                                    Change Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
