@@ -110,7 +110,13 @@ class WebViewActivity : AppCompatActivity() {
                     if ('serviceWorker' in navigator) {
                         navigator.serviceWorker.getRegistrations().then(function(registrations) {
                             if (registrations.length === 0) {
-                                navigator.serviceWorker.register('/sw.js');
+                                navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                                    console.log('Service Worker registered');
+                                    // Richiedi permesso notifiche
+                                    if ('Notification' in window && Notification.permission === 'default') {
+                                        Notification.requestPermission();
+                                    }
+                                });
                             }
                         });
                     }

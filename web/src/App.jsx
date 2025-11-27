@@ -6,7 +6,9 @@ import NoteEditor from './components/NoteEditor';
 import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
 import { AuthProvider, useAuth } from './AuthContext';
+import { useReminderNotifications } from './hooks/useReminderNotifications';
 import { FaBars, FaSearch, FaLightbulb, FaRegBell, FaArchive, FaTrash, FaCog, FaSignOutAlt, FaUserShield } from 'react-icons/fa';
+import { useReminderNotifications } from './hooks/useReminderNotifications';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -28,8 +30,13 @@ function Home() {
   const [editingNote, setEditingNote] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState('notes'); // 'notes', 'reminders', 'archive', 'trash'
+  const [showOverdueAlert, setShowOverdueAlert] = useState(false);
+  const [overdueReminders, setOverdueReminders] = useState([]);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  
+  // Hook per gestire notifiche reminder
+  const { requestPermission, permission } = useReminderNotifications(notes);
 
   useEffect(() => {
     let filter = 'all';
@@ -42,9 +49,27 @@ function Home() {
   const fetchNotes = async (filter = 'all') => {
     try {
       const response = await getNotes(filter);
-      setNotes(response.data.data);
+      const fetchedNotes = response.data.data;
+      setNotes(fetchedNotes);
+      
+      // Controlla reminder scaduti quando si caricano le note
+      checkOverdueReminders(fetchedNotes);
     } catch (error) {
       console.error("Error fetching notes:", error);
+    }
+  };
+
+  const checkOverdueReminders = (notesList) => {
+    const now = new Date();
+    const overdue = notesList.filter(note => {
+      if (!note.reminder_date) return false;
+      const reminderDate = new Date(note.reminder_date);
+      return reminderDate <= now;
+    });
+
+    if (overdue.length > 0) {
+      setOverdueReminders(overdue);
+      setShowOverdueAlert(true);
     }
   };
 
@@ -124,6 +149,105 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-keep-bg text-keep-text font-sans flex flex-col">
+      {/* Overdue Reminders Alert */}
+      {showOverdueAlert && overdueReminders.length > 0 && (
+        <div className="fixed top-[clamp(3.5rem,7vw,4rem)] left-0 right-0 z-50 bg-yellow-500/90 backdrop-blur-md border-b border-yellow-600 p-[clamp(0.75rem,1.5vw,1rem)]">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <FaRegBell className="text-yellow-900 text-[clamp(1.25rem,2vw,1.5rem)]" />
+              <div>
+                <p className="font-semibold text-yellow-900">
+                  {overdueReminders.length} reminder{overdueReminders.length > 1 ? 's' : ''} scaduto{overdueReminders.length > 1 ? 'i' : ''}
+                </p>
+                <p className="text-sm text-yellow-800">
+                  {overdueReminders.slice(0, 2).map(n => n.title || 'Untitled').join(', ')}
+                  {overdueReminders.length > 2 && ` e altri ${overdueReminders.length - 2}`}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {permission !== 'granted' && (
+                <button
+                  onClick={async () => {
+                    const perm = await requestPermission();
+                    if (perm === 'granted') {
+                      alert('Notifiche abilitate! Riceverai notifiche quando i reminder scadono.');
+                    }
+                  }}
+                  className="px-[clamp(0.75rem,1.5vw,1rem)] py-[clamp(0.5rem,1vw,0.75rem)] bg-yellow-600 text-yellow-900 rounded-lg hover:bg-yellow-700 transition-colors text-[clamp(0.875rem,1vw,1rem)] font-medium"
+                >
+                  Abilita Notifiche
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowOverdueAlert(false);
+                  setActiveSection('reminders');
+                }}
+                className="px-[clamp(0.75rem,1.5vw,1rem)] py-[clamp(0.5rem,1vw,0.75rem)] bg-yellow-600 text-yellow-900 rounded-lg hover:bg-yellow-700 transition-colors text-[clamp(0.875rem,1vw,1rem)] font-medium"
+              >
+                Vedi Reminders
+              </button>
+              <button
+                onClick={() => setShowOverdueAlert(false)}
+                className="p-[clamp(0.5rem,1vw,0.75rem)] text-yellow-900 hover:bg-yellow-600 rounded-lg transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+        <div className="fixed top-[clamp(3.5rem,7vw,4rem)] left-0 right-0 z-50 bg-yellow-500/90 backdrop-blur-md border-b border-yellow-600 p-[clamp(0.75rem,1.5vw,1rem)]">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <FaRegBell className="text-yellow-900 text-[clamp(1.25rem,2vw,1.5rem)]" />
+              <div>
+                <p className="font-semibold text-yellow-900">
+                  {overdueReminders.length} reminder{overdueReminders.length > 1 ? 's' : ''} scaduto{overdueReminders.length > 1 ? 'i' : ''}
+                </p>
+                <p className="text-sm text-yellow-800">
+                  {overdueReminders.slice(0, 2).map(n => n.title || 'Untitled').join(', ')}
+                  {overdueReminders.length > 2 && ` e altri ${overdueReminders.length - 2}`}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {permission !== 'granted' && (
+                <button
+                  onClick={async () => {
+                    const perm = await requestPermission();
+                    if (perm === 'granted') {
+                      alert('Notifiche abilitate! Riceverai notifiche quando i reminder scadono.');
+                    }
+                  }}
+                  className="px-[clamp(0.75rem,1.5vw,1rem)] py-[clamp(0.5rem,1vw,0.75rem)] bg-yellow-600 text-yellow-900 rounded-lg hover:bg-yellow-700 transition-colors text-[clamp(0.875rem,1vw,1rem)] font-medium"
+                >
+                  Abilita Notifiche
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowOverdueAlert(false);
+                  setActiveSection('reminders');
+                }}
+                className="px-[clamp(0.75rem,1.5vw,1rem)] py-[clamp(0.5rem,1vw,0.75rem)] bg-yellow-600 text-yellow-900 rounded-lg hover:bg-yellow-700 transition-colors text-[clamp(0.875rem,1vw,1rem)] font-medium"
+              >
+                Vedi Reminders
+              </button>
+              <button
+                onClick={() => setShowOverdueAlert(false)}
+                className="p-[clamp(0.5rem,1vw,0.75rem)] text-yellow-900 hover:bg-yellow-600 rounded-lg transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 h-[clamp(3.5rem,7vw,4rem)] bg-keep-bg/90 backdrop-blur-md border-b border-keep-border flex items-center px-[clamp(0.5rem,2vw,1rem)] z-50 transition-all duration-300">
         <div className="flex items-center gap-[clamp(0.5rem,1.5vw,1rem)] w-auto sm:w-64">
