@@ -123,3 +123,25 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Gestione notifiche push per reminders
+self.addEventListener('notificationclick', (event) => {
+  console.log('[Service Worker] Notification click received.');
+  event.notification.close();
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then((clientList) => {
+      // Se c'è già una finestra aperta, portala in primo piano
+      for (let i = 0; i < clientList.length; i++) {
+        const client = clientList[i];
+        if (client.url === '/' && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Altrimenti apri una nuova finestra
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
+    })
+  );
+});
+
