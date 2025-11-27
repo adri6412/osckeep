@@ -46,6 +46,16 @@ class WebViewActivity : AppCompatActivity() {
         webSettings.allowFileAccess = true
         webSettings.allowContentAccess = true
         
+        // Configurazione per ridimensionamento dinamico su mobile
+        webSettings.useWideViewPort = true
+        webSettings.loadWithOverviewMode = true
+        webSettings.setSupportZoom(true)
+        webSettings.builtInZoomControls = false
+        webSettings.displayZoomControls = false
+        
+        // Abilita layout algorithm per mobile
+        webSettings.layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
+        
         // User agent
         webSettings.userAgentString = webSettings.userAgentString + " OscKeepApp/1.0"
         
@@ -71,6 +81,29 @@ class WebViewActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                
+                // Inietta CSS per migliorare il ridimensionamento su mobile
+                view?.evaluateJavascript(
+                    """
+                    (function() {
+                        // Forza viewport mobile
+                        var meta = document.querySelector('meta[name="viewport"]');
+                        if (!meta) {
+                            meta = document.createElement('meta');
+                            meta.name = 'viewport';
+                            document.getElementsByTagName('head')[0].appendChild(meta);
+                        }
+                        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes';
+                        
+                        // Assicura che il body occupi tutto lo spazio
+                        var style = document.createElement('style');
+                        style.innerHTML = 'html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; overflow-x: hidden !important; } #root { width: 100% !important; max-width: 100% !important; }';
+                        document.head.appendChild(style);
+                    })();
+                    """.trimIndent(),
+                    null
+                )
+                
                 // Forza il Service Worker a registrarsi
                 view?.evaluateJavascript(
                     """
