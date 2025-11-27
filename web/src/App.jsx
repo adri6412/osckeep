@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { getNotes, createNote, updateNote, deleteNote } from './api';
 import NoteCard from './components/NoteCard';
 import NoteEditor from './components/NoteEditor';
-import { FaBars, FaSearch, FaRedo, FaList, FaCog } from 'react-icons/fa';
+import { FaBars, FaSearch, FaLightbulb, FaRegBell, FaArchive, FaTrash, FaCog } from 'react-icons/fa';
 
 function App() {
   const [notes, setNotes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingNote, setEditingNote] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     fetchNotes();
@@ -51,26 +52,33 @@ function App() {
   );
 
   return (
-    <div className="min-h-screen bg-keep-bg text-keep-text font-sans">
+    <div className="min-h-screen bg-keep-bg text-keep-text font-sans flex flex-col">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 border-b border-keep-border bg-keep-bg flex items-center px-4 z-50">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-keep-bg/90 backdrop-blur-md border-b border-keep-border flex items-center px-4 z-50 transition-all duration-300">
         <div className="flex items-center gap-4 w-64">
-          <button className="p-3 rounded-full hover:bg-keep-hover"><FaBars /></button>
-          <div className="flex items-center gap-2">
-            <img src="https://www.gstatic.com/images/branding/product/1x/keep_2020q4_48dp.png" alt="Keep" className="h-10 w-10" />
-            <span className="text-xl text-gray-300">OscKeep</span>
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-3 rounded-full hover:bg-keep-hover transition-colors"
+          >
+            <FaBars className="text-keep-muted" />
+          </button>
+          <div className="flex items-center gap-2 select-none">
+            <div className="bg-yellow-500 p-1.5 rounded-lg">
+              <FaLightbulb className="text-keep-bg text-lg" />
+            </div>
+            <span className="text-xl font-semibold text-keep-text tracking-tight">OscKeep</span>
           </div>
         </div>
 
-        <div className="flex-1 max-w-2xl mx-auto">
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaSearch className="text-gray-500 group-focus-within:text-white" />
+        <div className="flex-1 max-w-3xl mx-auto px-4">
+          <div className="relative group w-full">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <FaSearch className="text-keep-muted group-focus-within:text-keep-text transition-colors" />
             </div>
             <input
               type="text"
               placeholder="Search"
-              className="block w-full pl-10 pr-3 py-3 bg-gray-700 border-transparent rounded-lg leading-5 text-gray-300 placeholder-gray-500 focus:outline-none focus:bg-white focus:text-gray-900 sm:text-sm transition duration-150 ease-in-out"
+              className="block w-full pl-11 pr-4 py-3 bg-keep-sidebar border border-transparent focus:border-keep-border rounded-xl leading-5 text-keep-text placeholder-keep-muted focus:outline-none focus:bg-keep-card focus:shadow-lg transition-all duration-200"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -78,31 +86,46 @@ function App() {
         </div>
 
         <div className="flex items-center gap-2 w-64 justify-end">
-          <button className="p-3 rounded-full hover:bg-keep-hover"><FaRedo /></button>
-          <button className="p-3 rounded-full hover:bg-keep-hover"><FaList /></button>
-          <button className="p-3 rounded-full hover:bg-keep-hover"><FaCog /></button>
+          <button className="p-3 rounded-full hover:bg-keep-hover transition-colors"><FaCog className="text-keep-muted" /></button>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 ml-2"></div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="pt-20 pb-8 px-4 md:px-12 lg:px-32">
-        <NoteEditor onSave={handleSaveNote} />
+      <div className="flex flex-1 pt-16">
+        {/* Sidebar */}
+        <aside
+          className={`fixed left-0 top-16 bottom-0 w-64 bg-keep-bg transition-transform duration-300 ease-in-out z-40 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        >
+          <nav className="p-2 space-y-1">
+            <SidebarItem icon={<FaLightbulb />} label="Notes" active />
+            <SidebarItem icon={<FaRegBell />} label="Reminders" />
+            <SidebarItem icon={<FaArchive />} label="Archive" />
+            <SidebarItem icon={<FaTrash />} label="Trash" />
+          </nav>
+        </aside>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
-          {filteredNotes.map(note => (
-            <NoteCard
-              key={note.id}
-              note={note}
-              onDelete={handleDeleteNote}
-              onEdit={setEditingNote}
-            />
-          ))}
-        </div>
-      </main>
+        {/* Main Content */}
+        <main className={`flex-1 transition-all duration-300 p-4 md:p-8 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+          <div className="max-w-6xl mx-auto">
+            <NoteEditor onSave={handleSaveNote} />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8 auto-rows-max">
+              {filteredNotes.map(note => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  onDelete={handleDeleteNote}
+                  onEdit={setEditingNote}
+                />
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
 
       {/* Edit Modal */}
       {editingNote && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
           <NoteEditor
             initialNote={editingNote}
             onSave={handleSaveNote}
@@ -113,5 +136,12 @@ function App() {
     </div>
   );
 }
+
+const SidebarItem = ({ icon, label, active }) => (
+  <div className={`flex items-center gap-4 px-6 py-3 rounded-r-full cursor-pointer transition-colors ${active ? 'bg-keep-hover text-keep-text font-medium' : 'text-keep-muted hover:bg-keep-hover hover:text-keep-text'}`}>
+    <span className="text-lg">{icon}</span>
+    <span className="text-sm tracking-wide">{label}</span>
+  </div>
+);
 
 export default App;
