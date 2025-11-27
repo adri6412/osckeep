@@ -1,14 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { getNotes, createNote, updateNote, deleteNote } from './api';
 import NoteCard from './components/NoteCard';
 import NoteEditor from './components/NoteEditor';
-import { FaBars, FaSearch, FaLightbulb, FaRegBell, FaArchive, FaTrash, FaCog } from 'react-icons/fa';
+import LoginPage from './pages/LoginPage';
+import AdminPage from './pages/AdminPage';
+import { AuthProvider, useAuth } from './AuthContext';
+import { FaBars, FaSearch, FaLightbulb, FaRegBell, FaArchive, FaTrash, FaCog, FaSignOutAlt, FaUserShield } from 'react-icons/fa';
 
-function App() {
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <Navigate to="/login" />;
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div>Loading...</div>;
+  if (!user || user.role !== 'admin') return <Navigate to="/" />;
+  return children;
+};
+
+function Home() {
   const [notes, setNotes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingNote, setEditingNote] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchNotes();
@@ -86,8 +106,17 @@ function App() {
         </div>
 
         <div className="flex items-center gap-2 w-64 justify-end">
-          <button className="p-3 rounded-full hover:bg-keep-hover transition-colors"><FaCog className="text-keep-muted" /></button>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 ml-2"></div>
+          {user?.role === 'admin' && (
+            <button onClick={() => navigate('/admin')} className="p-3 rounded-full hover:bg-keep-hover transition-colors text-blue-400" title="Admin Dashboard">
+              <FaUserShield />
+            </button>
+          )}
+          <button onClick={logout} className="p-3 rounded-full hover:bg-keep-hover transition-colors text-red-400" title="Logout">
+            <FaSignOutAlt />
+          </button>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 ml-2 flex items-center justify-center text-xs font-bold">
+            {user?.username?.[0].toUpperCase()}
+          </div>
         </div>
       </header>
 
@@ -143,5 +172,25 @@ const SidebarItem = ({ icon, label, active }) => (
     <span className="text-sm tracking-wide">{label}</span>
   </div>
 );
+
+function App() {
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/admin" element={
+          <AdminRoute>
+            <AdminPage />
+          </AdminRoute>
+        } />
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Home />
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </AuthProvider>
+  );
+}
 
 export default App;

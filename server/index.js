@@ -1,7 +1,10 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const db = require('./database');
+const { verifyToken, verifyAdmin, SECRET_KEY } = require('./authMiddleware');
 
 const app = express();
 const PORT = 3000;
@@ -9,52 +12,109 @@ const PORT = 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// Get all notes
-app.get('/notes', (req, res) => {
-    const sql = "SELECT * FROM notes ORDER BY id DESC";
-    db.all(sql, [], (err, rows) => {
+// --- AUTHENTICATION ---
+
+// Login
+app.post('/auth/login', (req, res) => {
+    const { username, password } = req.body;
+    db.get('SELECT * FROM users WHERE username = ?', [username], async (err, user) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) return res.status(401).json({ error: 'Invalid password' });
+
+        const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, SECRET_KEY, { expiresIn: '24h' });
+        res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
+    });
+});
+
+// Seed Admin (Internal use or check on startup)
+const seedAdmin = async () => {
+    const adminPassword = await bcrypt.hash('admin123', 10);
+    db.run(`INSERT OR IGNORE INTO users (username, password, role) VALUES ('admin', ?, 'admin')`, [adminPassword], (err) => {
+        if (err) console.error("Error seeding admin:", err);
+    });
+};
+seedAdmin();
+
+// --- USER MANAGEMENT (Admin Only) ---
+
+app.get('/users', verifyToken, verifyAdmin, (req, res) => {
+    db.all('SELECT id, username, role, created_at FROM users', [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: rows });
+    });
+});
+
+app.post('/users', verifyToken, verifyAdmin, async (req, res) => {
+    const { username, password, role } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    db.run('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', [username, hashedPassword, role || 'user'], function (err) {
+        if (err) return res.status(400).json({ error: err.message });
+        res.json({ message: "User created", id: this.lastID });
+    });
+});
+
+app.delete('/users/:id', verifyToken, verifyAdmin, (req, res) => {
+    db.run('DELETE FROM users WHERE id = ?', [req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "User deleted", changes: this.changes });
+    });
+});
+
+// --- NOTES (Protected) ---
+
+// Get all notes (User sees only their own)
+app.get('/notes', verifyToken, (req, res) => {
+    // Admin sees all? Or just their own? Let's say Admin sees all for management, User sees own.
+    // Actually, standard Keep behavior: you see your own notes.
+    // If Admin wants to see all, maybe a specific endpoint. For now, strict isolation.
+    const sql = "SELECT * FROM notes WHERE user_id = ? ORDER BY id DESC";
+    db.all(sql, [req.user.id], (err, rows) => {
         if (err) {
-            res.status(400).json({"error":err.message});
+            res.status(400).json({ "error": err.message });
             return;
         }
         res.json({
-            "message":"success",
-            "data":rows
+            "message": "success",
+            "data": rows
         })
     });
 });
 
 // Create a new note
-app.post('/notes', (req, res) => {
+app.post('/notes', verifyToken, (req, res) => {
     const { title, content, color } = req.body;
-    const sql ='INSERT INTO notes (title, content, color) VALUES (?,?,?)';
-    const params =[title, content, color || '#ffffff'];
+    const sql = 'INSERT INTO notes (user_id, title, content, color) VALUES (?,?,?,?)';
+    const params = [req.user.id, title, content, color || '#ffffff'];
     db.run(sql, params, function (err, result) {
-        if (err){
-            res.status(400).json({"error": err.message})
+        if (err) {
+            res.status(400).json({ "error": err.message })
             return;
         }
         res.json({
             "message": "success",
-            "data": { id: this.lastID, title, content, color }
+            "data": { id: this.lastID, user_id: req.user.id, title, content, color }
         })
     });
 });
 
-// Update a note
-app.put('/notes/:id', (req, res) => {
+// Update a note (Ensure ownership)
+app.put('/notes/:id', verifyToken, (req, res) => {
     const { title, content, color } = req.body;
     const sql = `UPDATE notes SET 
                  title = COALESCE(?,title), 
                  content = COALESCE(?,content), 
                  color = COALESCE(?,color) 
-                 WHERE id = ?`;
-    const params = [title, content, color, req.params.id];
-    db.run(sql, params, function(err, result) {
+                 WHERE id = ? AND user_id = ?`;
+    const params = [title, content, color, req.params.id, req.user.id];
+    db.run(sql, params, function (err, result) {
         if (err) {
-            res.status(400).json({"error": res.message})
+            res.status(400).json({ "error": res.message })
             return;
         }
+        if (this.changes === 0) return res.status(404).json({ error: "Note not found or unauthorized" });
         res.json({
             message: "success",
             changes: this.changes
@@ -62,15 +122,16 @@ app.put('/notes/:id', (req, res) => {
     });
 });
 
-// Delete a note
-app.delete('/notes/:id', (req, res) => {
-    const sql = 'DELETE FROM notes WHERE id = ?';
-    db.run(sql, req.params.id, function (err, result) {
-        if (err){
-            res.status(400).json({"error": res.message})
+// Delete a note (Ensure ownership)
+app.delete('/notes/:id', verifyToken, (req, res) => {
+    const sql = 'DELETE FROM notes WHERE id = ? AND user_id = ?';
+    db.run(sql, [req.params.id, req.user.id], function (err, result) {
+        if (err) {
+            res.status(400).json({ "error": res.message })
             return;
         }
-        res.json({"message":"deleted", changes: this.changes})
+        if (this.changes === 0) return res.status(404).json({ error: "Note not found or unauthorized" });
+        res.json({ "message": "deleted", changes: this.changes })
     });
 });
 

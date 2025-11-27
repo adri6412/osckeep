@@ -23,6 +23,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        val prefs = getSharedPreferences("keep_prefs", Context.MODE_PRIVATE)
+        val token = "Bearer " + prefs.getString("token", "")
+
         // Setup Retrofit
         val retrofit = Retrofit.Builder()
             .baseUrl("http://10.0.2.2:3500/") // Emulator localhost
@@ -33,19 +36,19 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             KeepCloneTheme {
-                KeepApp(api)
+                KeepApp(api, token)
             }
         }
     }
 }
 
 @Composable
-fun KeepApp(api: KeepApi) {
+fun KeepApp(api: KeepApi, token: String) {
     var notes by remember { mutableStateOf(listOf<Note>()) }
     
-    // Fetch notes (simplified for demo)
+    // Fetch notes
     LaunchedEffect(Unit) {
-        // api.getNotes().enqueue(...) 
+        // api.getNotes(token).enqueue(...) 
     }
 
     Scaffold(

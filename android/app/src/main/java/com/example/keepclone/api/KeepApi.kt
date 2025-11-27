@@ -5,15 +5,18 @@ import retrofit2.Call
 import retrofit2.http.*
 
 interface KeepApi {
+    @POST("auth/login")
+    fun login(@Body request: LoginRequest): Call<LoginResponse>
+
     @GET("notes")
-    fun getNotes(): Call<Map<String, Any>> // Adjust return type based on actual JSON structure
+    fun getNotes(@Header("Authorization") token: String): Call<Map<String, Any>>
 
     @POST("notes")
-    fun createNote(@Body note: Note): Call<Map<String, Any>>
+    fun createNote(@Header("Authorization") token: String, @Body note: Note): Call<Map<String, Any>>
 
     @PUT("notes/{id}")
-    fun updateNote(@Path("id") id: Int, @Body note: Note): Call<Map<String, Any>>
+    fun updateNote(@Header("Authorization") token: String, @Path("id") id: Int, @Body note: Note): Call<Map<String, Any>>
 
     @DELETE("notes/{id}")
-    fun deleteNote(@Path("id") id: Int): Call<Map<String, Any>>
+    fun deleteNote(@Header("Authorization") token: String, @Path("id") id: Int): Call<Map<String, Any>>
 }
