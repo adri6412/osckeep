@@ -23,7 +23,7 @@ This project is a note-taking application (OscKeep) with a Node.js server, React
     docker-compose up --build -d
     ```
 3.  Access the applications:
-    - **Web Client**: http://localhost:8088
+    - **Web Client**: http://localhost:9091
     - **API Server**: http://localhost:3500
 
 ### Android Client

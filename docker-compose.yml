@@ -14,7 +14,7 @@ services:
     build: ./web
     container_name: keep-web
     ports:
-      - "8088:80"
+      - "9091:80"
     depends_on:
       - server
     restart: always
