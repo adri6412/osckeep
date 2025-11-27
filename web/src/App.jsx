@@ -8,7 +8,6 @@ import AdminPage from './pages/AdminPage';
 import { AuthProvider, useAuth } from './AuthContext';
 import { useReminderNotifications } from './hooks/useReminderNotifications';
 import { FaBars, FaSearch, FaLightbulb, FaRegBell, FaArchive, FaTrash, FaCog, FaSignOutAlt, FaUserShield } from 'react-icons/fa';
-import { useReminderNotifications } from './hooks/useReminderNotifications';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -153,55 +152,6 @@ function Home() {
       {showOverdueAlert && overdueReminders.length > 0 && (
         <div className="fixed top-[clamp(3.5rem,7vw,4rem)] left-0 right-0 z-50 bg-yellow-500/90 backdrop-blur-md border-b border-yellow-600 p-[clamp(0.75rem,1.5vw,1rem)]">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <FaRegBell className="text-yellow-900 text-[clamp(1.25rem,2vw,1.5rem)]" />
-              <div>
-                <p className="font-semibold text-yellow-900">
-                  {overdueReminders.length} reminder{overdueReminders.length > 1 ? 's' : ''} scaduto{overdueReminders.length > 1 ? 'i' : ''}
-                </p>
-                <p className="text-sm text-yellow-800">
-                  {overdueReminders.slice(0, 2).map(n => n.title || 'Untitled').join(', ')}
-                  {overdueReminders.length > 2 && ` e altri ${overdueReminders.length - 2}`}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {permission !== 'granted' && (
-                <button
-                  onClick={async () => {
-                    const perm = await requestPermission();
-                    if (perm === 'granted') {
-                      alert('Notifiche abilitate! Riceverai notifiche quando i reminder scadono.');
-                    }
-                  }}
-                  className="px-[clamp(0.75rem,1.5vw,1rem)] py-[clamp(0.5rem,1vw,0.75rem)] bg-yellow-600 text-yellow-900 rounded-lg hover:bg-yellow-700 transition-colors text-[clamp(0.875rem,1vw,1rem)] font-medium"
-                >
-                  Abilita Notifiche
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  setShowOverdueAlert(false);
-                  setActiveSection('reminders');
-                }}
-                className="px-[clamp(0.75rem,1.5vw,1rem)] py-[clamp(0.5rem,1vw,0.75rem)] bg-yellow-600 text-yellow-900 rounded-lg hover:bg-yellow-700 transition-colors text-[clamp(0.875rem,1vw,1rem)] font-medium"
-              >
-                Vedi Reminders
-              </button>
-              <button
-                onClick={() => setShowOverdueAlert(false)}
-                className="p-[clamp(0.5rem,1vw,0.75rem)] text-yellow-900 hover:bg-yellow-600 rounded-lg transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-        <div className="fixed top-[clamp(3.5rem,7vw,4rem)] left-0 right-0 z-50 bg-yellow-500/90 backdrop-blur-md border-b border-yellow-600 p-[clamp(0.75rem,1.5vw,1rem)]">
-          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <FaRegBell className="text-yellow-900 text-[clamp(1.25rem,2vw,1.5rem)]" />
               <div>
