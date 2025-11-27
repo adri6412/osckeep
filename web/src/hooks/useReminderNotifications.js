@@ -7,7 +7,13 @@ export const useReminderNotifications = (notes) => {
 
   // Richiedi permesso notifiche al caricamento
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
+    // Controlla se siamo su Android (tramite bridge)
+    const isAndroid = typeof window.AndroidNotificationBridge !== 'undefined';
+    
+    if (isAndroid) {
+      // Su Android, il permesso è gestito dal bridge
+      notificationPermissionRef.current = 'granted';
+    } else if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().then(permission => {
         notificationPermissionRef.current = permission;
       });
@@ -19,7 +25,10 @@ export const useReminderNotifications = (notes) => {
   // Controlla reminder scaduti ogni minuto
   useEffect(() => {
     const checkReminders = () => {
-      if (!('Notification' in window) || Notification.permission !== 'granted') {
+      const isAndroid = typeof window.AndroidNotificationBridge !== 'undefined';
+      const hasPermission = isAndroid || ('Notification' in window && Notification.permission === 'granted');
+      
+      if (!hasPermission) {
         return;
       }
 
@@ -44,13 +53,17 @@ export const useReminderNotifications = (notes) => {
         const title = note.title || 'Reminder';
         const body = note.content || 'You have a reminder';
         
-        new Notification(`🔔 ${title}`, {
-          body: body.substring(0, 100),
-          icon: '/vite.svg',
-          badge: '/vite.svg',
-          tag: `reminder-${note.id}`,
-          requireInteraction: false,
-        });
+        try {
+          new Notification(title, {
+            body: body.substring(0, 200),
+            icon: '/vite.svg',
+            badge: '/vite.svg',
+            tag: `reminder-${note.id}`,
+            requireInteraction: false,
+          });
+        } catch (error) {
+          console.error('Error showing notification:', error);
+        }
       });
     };
 
@@ -85,14 +98,20 @@ export const useReminderNotifications = (notes) => {
 
   return {
     requestPermission: async () => {
-      if ('Notification' in window) {
+      const isAndroid = typeof window.AndroidNotificationBridge !== 'undefined';
+      if (isAndroid) {
+        notificationPermissionRef.current = 'granted';
+        return 'granted';
+      } else if ('Notification' in window) {
         const permission = await Notification.requestPermission();
         notificationPermissionRef.current = permission;
         return permission;
       }
       return 'denied';
     },
-    permission: notificationPermissionRef.current || (typeof Notification !== 'undefined' ? Notification.permission : 'denied')
+    permission: notificationPermissionRef.current || 
+      (typeof window.AndroidNotificationBridge !== 'undefined' ? 'granted' : 
+       (typeof Notification !== 'undefined' ? Notification.permission : 'denied'))
   };
 };
 

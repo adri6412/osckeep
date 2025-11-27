@@ -2,9 +2,12 @@ package com.example.keepclone
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.Bundle
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -12,17 +15,36 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 class WebViewActivity : AppCompatActivity() {
     private lateinit var webView: WebView
+    private lateinit var notificationBridge: NotificationBridge
     private val WEBSITE_URL = "https://note.adrianofrongillo.ovh/"
+    private val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Richiedi permesso notifiche su Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) 
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST_CODE
+                )
+            }
+        }
+        
         webView = WebView(this)
         setContentView(webView)
+        
+        // Inizializza bridge notifiche
+        notificationBridge = NotificationBridge(this)
 
         // Configurazione WebView per supporto offline e Service Workers
         val webSettings: WebSettings = webView.settings
@@ -58,6 +80,9 @@ class WebViewActivity : AppCompatActivity() {
         
         // User agent
         webSettings.userAgentString = webSettings.userAgentString + " OscKeepApp/1.0"
+        
+        // Aggiungi JavaScript Interface per notifiche native
+        webView.addJavascriptInterface(notificationBridge, "AndroidNotificationBridge")
         
         // WebViewClient personalizzato per gestire offline e caching
         webView.webViewClient = object : WebViewClient() {
@@ -112,13 +137,46 @@ class WebViewActivity : AppCompatActivity() {
                             if (registrations.length === 0) {
                                 navigator.serviceWorker.register('/sw.js').then(function(registration) {
                                     console.log('Service Worker registered');
-                                    // Richiedi permesso notifiche
-                                    if ('Notification' in window && Notification.permission === 'default') {
-                                        Notification.requestPermission();
-                                    }
                                 });
                             }
                         });
+                    }
+                    
+                    // Setup Android notification bridge
+                    if (typeof AndroidNotificationBridge !== 'undefined') {
+                        // Override Notification API per usare notifiche native Android
+                        if (typeof Notification !== 'undefined') {
+                            const OriginalNotification = Notification;
+                            window.Notification = function(title, options) {
+                                if (AndroidNotificationBridge) {
+                                    const body = options?.body || '';
+                                    const noteId = options?.tag ? parseInt(options.tag.replace('reminder-', '')) || Date.now() : Date.now();
+                                    AndroidNotificationBridge.showNotification(title, body, noteId);
+                                    return {
+                                        close: function() {},
+                                        onclick: null,
+                                        onclose: null,
+                                        onerror: null,
+                                        onshow: null,
+                                        tag: options?.tag || '',
+                                        title: title,
+                                        body: body
+                                    };
+                                }
+                                return new OriginalNotification(title, options);
+                            };
+                            window.Notification.requestPermission = function() {
+                                return new Promise(function(resolve) {
+                                    if (AndroidNotificationBridge) {
+                                        const perm = AndroidNotificationBridge.requestPermission();
+                                        resolve(perm === 'granted' ? 'granted' : 'default');
+                                    } else {
+                                        resolve('denied');
+                                    }
+                                });
+                            };
+                            window.Notification.permission = AndroidNotificationBridge ? 'granted' : 'denied';
+                        }
                     }
                     """.trimIndent(),
                     null
