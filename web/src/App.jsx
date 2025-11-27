@@ -123,7 +123,7 @@ function Home() {
       <div className="flex flex-1 pt-16">
         {/* Sidebar */}
         <aside
-          className={`fixed left-0 top-16 bottom-0 w-64 bg-keep-bg transition-transform duration-300 ease-in-out z-40 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          className={`fixed left-0 top-16 bottom-0 w-64 bg-keep-bg transition-transform duration-300 ease-in-out z-40 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
         >
           <nav className="p-2 space-y-1">
             <SidebarItem icon={<FaLightbulb />} label="Notes" active />
@@ -134,8 +134,8 @@ function Home() {
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 transition-all duration-300 p-4 md:p-8 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
-          <div className="max-w-6xl mx-auto">
+        <main className={`flex-1 transition-all duration-300 p-4 md:p-8 ${isSidebarOpen ? 'md:ml-64 ml-0' : 'ml-0'}`}>
+          <div className="max-w-6xl mx-auto w-full">
             <NoteEditor onSave={handleSaveNote} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8 auto-rows-max">
