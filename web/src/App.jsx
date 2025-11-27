@@ -27,16 +27,18 @@ function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingNote, setEditingNote] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [activeSection, setActiveSection] = useState('notes'); // 'notes', 'reminders', 'archive', 'trash'
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchNotes();
-  }, []);
+  }, [activeSection]);
+  }, [activeSection]);
 
-  const fetchNotes = async () => {
+  const fetchNotes = async (filter = 'all') => {
     try {
-      const response = await getNotes();
+      const response = await getNotes(filter);
       setNotes(response.data.data);
     } catch (error) {
       console.error("Error fetching notes:", error);
@@ -50,7 +52,11 @@ function Home() {
       } else {
         await createNote(note);
       }
-      fetchNotes();
+      let filter = 'all';
+      if (activeSection === 'archive') filter = 'archived';
+      else if (activeSection === 'trash') filter = 'trash';
+      else if (activeSection === 'reminders') filter = 'reminders';
+      fetchNotes(filter);
       setEditingNote(null);
     } catch (error) {
       console.error("Error saving note:", error);
@@ -59,11 +65,53 @@ function Home() {
 
   const handleDeleteNote = async (id) => {
     try {
-      await deleteNote(id);
-      fetchNotes();
+      if (activeSection === 'trash') {
+        // Permanent delete from trash
+        await deleteNote(id);
+      } else {
+        // Move to trash (soft delete)
+        await moveToTrash(id);
+      }
+      fetchNotes(activeSection === 'trash' ? 'trash' : 'all');
     } catch (error) {
       console.error("Error deleting note:", error);
     }
+  };
+
+  const handleArchiveNote = async (id) => {
+    try {
+      await archiveNote(id);
+      fetchNotes(activeSection === 'archive' ? 'archived' : 'all');
+    } catch (error) {
+      console.error("Error archiving note:", error);
+    }
+  };
+
+  const handleUnarchiveNote = async (id) => {
+    try {
+      await unarchiveNote(id);
+      fetchNotes('archived');
+    } catch (error) {
+      console.error("Error unarchiving note:", error);
+    }
+  };
+
+  const handleRestoreNote = async (id) => {
+    try {
+      await restoreNote(id);
+      fetchNotes('trash');
+    } catch (error) {
+      console.error("Error restoring note:", error);
+    }
+  };
+
+  const handleSectionChange = (section) => {
+    setActiveSection(section);
+    let filter = 'all';
+    if (section === 'archive') filter = 'archived';
+    else if (section === 'trash') filter = 'trash';
+    else if (section === 'reminders') filter = 'reminders';
+    fetchNotes(filter);
   };
 
   const filteredNotes = notes.filter(note =>
@@ -126,17 +174,39 @@ function Home() {
           className={`fixed left-0 top-16 bottom-0 w-64 bg-keep-bg transition-transform duration-300 ease-in-out z-40 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
         >
           <nav className="p-2 space-y-1">
-            <SidebarItem icon={<FaLightbulb />} label="Notes" active />
-            <SidebarItem icon={<FaRegBell />} label="Reminders" />
-            <SidebarItem icon={<FaArchive />} label="Archive" />
-            <SidebarItem icon={<FaTrash />} label="Trash" />
+            <SidebarItem 
+              icon={<FaLightbulb />} 
+              label="Notes" 
+              active={activeSection === 'notes'} 
+              onClick={() => handleSectionChange('notes')}
+            />
+            <SidebarItem 
+              icon={<FaRegBell />} 
+              label="Reminders" 
+              active={activeSection === 'reminders'}
+              onClick={() => handleSectionChange('reminders')}
+            />
+            <SidebarItem 
+              icon={<FaArchive />} 
+              label="Archive" 
+              active={activeSection === 'archive'}
+              onClick={() => handleSectionChange('archive')}
+            />
+            <SidebarItem 
+              icon={<FaTrash />} 
+              label="Trash" 
+              active={activeSection === 'trash'}
+              onClick={() => handleSectionChange('trash')}
+            />
           </nav>
         </aside>
 
         {/* Main Content */}
         <main className={`flex-1 transition-all duration-300 p-[clamp(0.75rem,2vw,2rem)] ${isSidebarOpen ? 'sm:ml-64 ml-0' : 'ml-0'}`}>
           <div className="max-w-6xl mx-auto w-full">
-            <NoteEditor onSave={handleSaveNote} />
+            {activeSection !== 'trash' && activeSection !== 'archive' && (
+              <NoteEditor onSave={handleSaveNote} />
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[clamp(0.75rem,2vw,1rem)] mt-[clamp(1.5rem,3vw,2rem)] auto-rows-max">
               {filteredNotes.map(note => (
@@ -145,6 +215,10 @@ function Home() {
                   note={note}
                   onDelete={handleDeleteNote}
                   onEdit={setEditingNote}
+                  onArchive={handleArchiveNote}
+                  onUnarchive={handleUnarchiveNote}
+                  onRestore={handleRestoreNote}
+                  activeSection={activeSection}
                 />
               ))}
             </div>
@@ -168,8 +242,11 @@ function Home() {
   );
 }
 
-const SidebarItem = ({ icon, label, active }) => (
-  <div className={`flex items-center gap-4 px-6 py-3 rounded-r-full cursor-pointer transition-colors ${active ? 'bg-keep-hover text-keep-text font-medium' : 'text-keep-muted hover:bg-keep-hover hover:text-keep-text'}`}>
+const SidebarItem = ({ icon, label, active, onClick }) => (
+  <div 
+    onClick={onClick}
+    className={`flex items-center gap-4 px-6 py-3 rounded-r-full cursor-pointer transition-colors ${active ? 'bg-keep-hover text-keep-text font-medium' : 'text-keep-muted hover:bg-keep-hover hover:text-keep-text'}`}
+  >
     <span className="text-lg">{icon}</span>
     <span className="text-sm tracking-wide">{label}</span>
   </div>

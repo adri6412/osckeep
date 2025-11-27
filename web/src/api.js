@@ -15,9 +15,13 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-export const getNotes = () => api.get('/notes');
+export const getNotes = (filter = 'all') => api.get('/notes', { params: { filter } });
 export const createNote = (note) => api.post('/notes', note);
 export const updateNote = (id, note) => api.put(`/notes/${id}`, note);
-export const deleteNote = (id) => api.delete(`/notes/${id}`);
+export const deleteNote = (id) => api.delete(`/notes/${id}`); // Permanent delete from trash
+export const archiveNote = (id) => api.put(`/notes/${id}/archive`);
+export const unarchiveNote = (id) => api.put(`/notes/${id}/unarchive`);
+export const moveToTrash = (id) => api.put(`/notes/${id}/delete`);
+export const restoreNote = (id) => api.put(`/notes/${id}/restore`);
 
 export default api;

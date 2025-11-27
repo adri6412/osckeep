@@ -87,12 +87,24 @@ app.put('/users/:id/password', verifyToken, async (req, res) => {
 
 // --- NOTES (Protected) ---
 
-// Get all notes (User sees only their own)
+// Get all notes (User sees only their own, excluding deleted)
 app.get('/notes', verifyToken, (req, res) => {
-    // Admin sees all? Or just their own? Let's say Admin sees all for management, User sees own.
-    // Actually, standard Keep behavior: you see your own notes.
-    // If Admin wants to see all, maybe a specific endpoint. For now, strict isolation.
-    const sql = "SELECT * FROM notes WHERE user_id = ? ORDER BY id DESC";
+    const { filter } = req.query; // 'all', 'archived', 'trash', 'reminders'
+    let sql = "SELECT * FROM notes WHERE user_id = ? AND deleted = 0";
+    
+    if (filter === 'archived') {
+        sql += " AND archived = 1";
+    } else if (filter === 'trash') {
+        sql = "SELECT * FROM notes WHERE user_id = ? AND deleted = 1";
+    } else if (filter === 'reminders') {
+        sql += " AND reminder_date IS NOT NULL AND reminder_date > datetime('now')";
+    } else {
+        // Default: show non-archived, non-deleted notes
+        sql += " AND archived = 0";
+    }
+    
+    sql += " ORDER BY reminder_date ASC, id DESC";
+    
     db.all(sql, [req.user.id], (err, rows) => {
         if (err) {
             res.status(400).json({ "error": err.message });
@@ -107,9 +119,9 @@ app.get('/notes', verifyToken, (req, res) => {
 
 // Create a new note
 app.post('/notes', verifyToken, (req, res) => {
-    const { title, content, color } = req.body;
-    const sql = 'INSERT INTO notes (user_id, title, content, color) VALUES (?,?,?,?)';
-    const params = [req.user.id, title, content, color || '#ffffff'];
+    const { title, content, color, reminder_date } = req.body;
+    const sql = 'INSERT INTO notes (user_id, title, content, color, reminder_date) VALUES (?,?,?,?,?)';
+    const params = [req.user.id, title, content, color || '#ffffff', reminder_date || null];
     db.run(sql, params, function (err, result) {
         if (err) {
             res.status(400).json({ "error": err.message })
@@ -117,23 +129,26 @@ app.post('/notes', verifyToken, (req, res) => {
         }
         res.json({
             "message": "success",
-            "data": { id: this.lastID, user_id: req.user.id, title, content, color }
+            "data": { id: this.lastID, user_id: req.user.id, title, content, color, reminder_date: reminder_date || null }
         })
     });
 });
 
 // Update a note (Ensure ownership)
 app.put('/notes/:id', verifyToken, (req, res) => {
-    const { title, content, color } = req.body;
+    const { title, content, color, archived, deleted, reminder_date } = req.body;
     const sql = `UPDATE notes SET 
                  title = COALESCE(?,title), 
                  content = COALESCE(?,content), 
-                 color = COALESCE(?,color) 
+                 color = COALESCE(?,color),
+                 archived = COALESCE(?,archived),
+                 deleted = COALESCE(?,deleted),
+                 reminder_date = ?
                  WHERE id = ? AND user_id = ?`;
-    const params = [title, content, color, req.params.id, req.user.id];
+    const params = [title, content, color, archived, deleted, reminder_date || null, req.params.id, req.user.id];
     db.run(sql, params, function (err, result) {
         if (err) {
-            res.status(400).json({ "error": res.message })
+            res.status(400).json({ "error": err.message })
             return;
         }
         if (this.changes === 0) return res.status(404).json({ error: "Note not found or unauthorized" });
@@ -144,16 +159,56 @@ app.put('/notes/:id', verifyToken, (req, res) => {
     });
 });
 
-// Delete a note (Ensure ownership)
+// Archive a note
+app.put('/notes/:id/archive', verifyToken, (req, res) => {
+    const sql = 'UPDATE notes SET archived = 1 WHERE id = ? AND user_id = ?';
+    db.run(sql, [req.params.id, req.user.id], function (err) {
+        if (err) return res.status(400).json({ "error": err.message });
+        if (this.changes === 0) return res.status(404).json({ error: "Note not found or unauthorized" });
+        res.json({ message: "success", changes: this.changes });
+    });
+});
+
+// Unarchive a note
+app.put('/notes/:id/unarchive', verifyToken, (req, res) => {
+    const sql = 'UPDATE notes SET archived = 0 WHERE id = ? AND user_id = ?';
+    db.run(sql, [req.params.id, req.user.id], function (err) {
+        if (err) return res.status(400).json({ "error": err.message });
+        if (this.changes === 0) return res.status(404).json({ error: "Note not found or unauthorized" });
+        res.json({ message: "success", changes: this.changes });
+    });
+});
+
+// Delete a note (soft delete - move to trash)
+app.put('/notes/:id/delete', verifyToken, (req, res) => {
+    const sql = 'UPDATE notes SET deleted = 1, archived = 0 WHERE id = ? AND user_id = ?';
+    db.run(sql, [req.params.id, req.user.id], function (err) {
+        if (err) return res.status(400).json({ "error": err.message });
+        if (this.changes === 0) return res.status(404).json({ error: "Note not found or unauthorized" });
+        res.json({ message: "success", changes: this.changes });
+    });
+});
+
+// Restore a note from trash
+app.put('/notes/:id/restore', verifyToken, (req, res) => {
+    const sql = 'UPDATE notes SET deleted = 0 WHERE id = ? AND user_id = ?';
+    db.run(sql, [req.params.id, req.user.id], function (err) {
+        if (err) return res.status(400).json({ "error": err.message });
+        if (this.changes === 0) return res.status(404).json({ error: "Note not found or unauthorized" });
+        res.json({ message: "success", changes: this.changes });
+    });
+});
+
+// Permanently delete a note (hard delete - only from trash)
 app.delete('/notes/:id', verifyToken, (req, res) => {
-    const sql = 'DELETE FROM notes WHERE id = ? AND user_id = ?';
+    const sql = 'DELETE FROM notes WHERE id = ? AND user_id = ? AND deleted = 1';
     db.run(sql, [req.params.id, req.user.id], function (err, result) {
         if (err) {
-            res.status(400).json({ "error": res.message })
+            res.status(400).json({ "error": err.message })
             return;
         }
-        if (this.changes === 0) return res.status(404).json({ error: "Note not found or unauthorized" });
-        res.json({ "message": "deleted", changes: this.changes })
+        if (this.changes === 0) return res.status(404).json({ error: "Note not found, unauthorized, or not in trash" });
+        res.json({ "message": "permanently deleted", changes: this.changes })
     });
 });
 

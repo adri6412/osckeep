@@ -49,10 +49,24 @@ const db = new sqlite3.Database(dbPath, (err) => {
             title TEXT,
             content TEXT,
             color TEXT DEFAULT '#ffffff',
+            archived INTEGER DEFAULT 0,
+            deleted INTEGER DEFAULT 0,
+            reminder_date DATETIME,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
         )`, (err) => {
             if (err) console.error('Error creating notes table', err);
+        });
+
+        // Migrate existing notes to add new columns if they don't exist
+        db.run(`ALTER TABLE notes ADD COLUMN archived INTEGER DEFAULT 0`, (err) => {
+            if (err && !err.message.includes('duplicate column')) console.error('Error adding archived column', err);
+        });
+        db.run(`ALTER TABLE notes ADD COLUMN deleted INTEGER DEFAULT 0`, (err) => {
+            if (err && !err.message.includes('duplicate column')) console.error('Error adding deleted column', err);
+        });
+        db.run(`ALTER TABLE notes ADD COLUMN reminder_date DATETIME`, (err) => {
+            if (err && !err.message.includes('duplicate column')) console.error('Error adding reminder_date column', err);
         });
     }
 });

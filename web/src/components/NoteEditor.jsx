@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaPalette, FaImage, FaArchive, FaUndo, FaRedo, FaCheck } from 'react-icons/fa';
+import { FaPalette, FaImage, FaArchive, FaUndo, FaRedo, FaCheck, FaRegBell } from 'react-icons/fa';
 
 const NoteEditor = ({ onSave, onClose, initialNote }) => {
     const [title, setTitle] = useState(initialNote?.title || '');
     const [content, setContent] = useState(initialNote?.content || '');
     const [color, setColor] = useState(initialNote?.color || '#1e293b');
+    const [reminderDate, setReminderDate] = useState(initialNote?.reminder_date ? initialNote.reminder_date.split('T')[0] : '');
+    const [reminderTime, setReminderTime] = useState(initialNote?.reminder_date ? initialNote.reminder_date.split('T')[1]?.substring(0, 5) : '');
+    const [showReminderPicker, setShowReminderPicker] = useState(false);
     const [isExpanded, setIsExpanded] = useState(!!initialNote);
     const wrapperRef = useRef(null);
 
@@ -38,15 +41,28 @@ const NoteEditor = ({ onSave, onClose, initialNote }) => {
 
     const handleClose = () => {
         if (title.trim() || content.trim()) {
-            onSave({ title, content, color, id: initialNote?.id });
+            const reminder_date = reminderDate && reminderTime 
+                ? `${reminderDate}T${reminderTime}:00` 
+                : reminderDate 
+                    ? `${reminderDate}T09:00:00` 
+                    : null;
+            onSave({ title, content, color, reminder_date, id: initialNote?.id });
         }
         if (!initialNote) {
             setIsExpanded(false);
             setTitle('');
             setContent('');
             setColor('#1e293b');
+            setReminderDate('');
+            setReminderTime('');
         }
         if (onClose) onClose();
+    };
+
+    const handleRemoveReminder = () => {
+        setReminderDate('');
+        setReminderTime('');
+        setShowReminderPicker(false);
     };
 
     return (
@@ -81,24 +97,70 @@ const NoteEditor = ({ onSave, onClose, initialNote }) => {
                         className="w-full bg-transparent text-keep-text text-[clamp(1rem,1.25vw,1.125rem)] placeholder-keep-muted/70 outline-none resize-none min-h-[clamp(8rem,20vw,12rem)] leading-relaxed py-[clamp(0.5rem,1vw,0.75rem)]"
                     />
 
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-[clamp(1rem,2vw,1.5rem)] mt-[clamp(1rem,2vw,1.5rem)] pt-[clamp(0.75rem,1.5vw,1rem)] border-t border-white/10">
-                        <div className="flex gap-[clamp(0.5rem,1vw,0.75rem)] flex-wrap">
-                            {colors.map(c => (
-                                <button
-                                    key={c}
-                                    onClick={() => setColor(c)}
-                                    className={`w-[clamp(1.75rem,3.5vw,2rem)] h-[clamp(1.75rem,3.5vw,2rem)] rounded-full border border-white/20 hover:scale-110 transition-transform ${color === c ? 'ring-2 ring-white' : ''}`}
-                                    style={{ backgroundColor: c }}
-                                    title={c}
-                                />
-                            ))}
+                    <div className="flex flex-col gap-[clamp(0.75rem,1.5vw,1rem)] mt-[clamp(1rem,2vw,1.5rem)] pt-[clamp(0.75rem,1.5vw,1rem)] border-t border-white/10">
+                        {/* Reminder Section */}
+                        <div className="flex items-center gap-[clamp(0.5rem,1vw,0.75rem)]">
+                            <button
+                                onClick={() => setShowReminderPicker(!showReminderPicker)}
+                                className={`p-[clamp(0.5rem,1vw,0.75rem)] rounded-lg transition-colors ${reminderDate ? 'bg-yellow-500/20 text-yellow-400' : 'hover:bg-black/20 text-keep-text/70'}`}
+                                title="Add reminder"
+                            >
+                                <FaRegBell />
+                            </button>
+                            {showReminderPicker && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <input
+                                        type="date"
+                                        value={reminderDate}
+                                        onChange={(e) => setReminderDate(e.target.value)}
+                                        className="px-[clamp(0.5rem,1vw,0.75rem)] py-[clamp(0.25rem,0.5vw,0.5rem)] bg-black/20 rounded text-[clamp(0.875rem,1vw,1rem)] text-keep-text border border-white/10"
+                                        min={new Date().toISOString().split('T')[0]}
+                                    />
+                                    {reminderDate && (
+                                        <input
+                                            type="time"
+                                            value={reminderTime}
+                                            onChange={(e) => setReminderTime(e.target.value)}
+                                            className="px-[clamp(0.5rem,1vw,0.75rem)] py-[clamp(0.25rem,0.5vw,0.5rem)] bg-black/20 rounded text-[clamp(0.875rem,1vw,1rem)] text-keep-text border border-white/10"
+                                        />
+                                    )}
+                                    {reminderDate && (
+                                        <button
+                                            onClick={handleRemoveReminder}
+                                            className="px-[clamp(0.5rem,1vw,0.75rem)] py-[clamp(0.25rem,0.5vw,0.5rem)] bg-red-500/20 text-red-400 rounded text-[clamp(0.875rem,1vw,1rem)] hover:bg-red-500/30"
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                            {reminderDate && !showReminderPicker && (
+                                <span className="text-[clamp(0.75rem,1vw,0.875rem)] text-keep-muted">
+                                    {new Date(reminderDate + (reminderTime ? `T${reminderTime}` : '')).toLocaleString()}
+                                </span>
+                            )}
                         </div>
-                        <button
-                            onClick={handleClose}
-                            className="px-[clamp(1.5rem,3vw,2rem)] py-[clamp(0.75rem,1.5vw,1rem)] text-[clamp(0.875rem,1.25vw,1rem)] font-semibold text-keep-bg bg-keep-text hover:bg-white rounded-lg transition-colors shadow-md w-full sm:w-auto"
-                        >
-                            Close
-                        </button>
+
+                        {/* Color Picker and Close Button */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-[clamp(1rem,2vw,1.5rem)]">
+                            <div className="flex gap-[clamp(0.5rem,1vw,0.75rem)] flex-wrap">
+                                {colors.map(c => (
+                                    <button
+                                        key={c}
+                                        onClick={() => setColor(c)}
+                                        className={`w-[clamp(1.75rem,3.5vw,2rem)] h-[clamp(1.75rem,3.5vw,2rem)] rounded-full border border-white/20 hover:scale-110 transition-transform ${color === c ? 'ring-2 ring-white' : ''}`}
+                                        style={{ backgroundColor: c }}
+                                        title={c}
+                                    />
+                                ))}
+                            </div>
+                            <button
+                                onClick={handleClose}
+                                className="px-[clamp(1.5rem,3vw,2rem)] py-[clamp(0.75rem,1.5vw,1rem)] text-[clamp(0.875rem,1.25vw,1rem)] font-semibold text-keep-bg bg-keep-text hover:bg-white rounded-lg transition-colors shadow-md w-full sm:w-auto"
+                            >
+                                Close
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
