@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3500'; // Will be proxied or configured
+const API_URL = '/api'; // Proxied via Nginx
 
 const api = axios.create({
     baseURL: API_URL,
