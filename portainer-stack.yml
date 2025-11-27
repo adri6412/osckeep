@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  server:
+    build: ./server
+    container_name: keep-server
+    ports:
+      - "3500:3000"
+    volumes:
+      - ./data:/app/data
+    restart: always
+
+  web:
+    build: ./web
+    container_name: keep-web
+    ports:
+      - "8088:80"
+    depends_on:
+      - server
+    restart: always
