@@ -1,7 +1,7 @@
 // Service Worker per caching offline
-const CACHE_NAME = 'osckeep-v1';
-const STATIC_CACHE = 'osckeep-static-v1';
-const API_CACHE = 'osckeep-api-v1';
+const CACHE_NAME = 'osckeep-v2';
+const STATIC_CACHE = 'osckeep-static-v2';
+const API_CACHE = 'osckeep-api-v2';
 
 // Risorse statiche da cacheare subito
 // Nota: i nomi dei file hashati verranno aggiornati automaticamente dal build
