@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { getNotes, createNote, updateNote, deleteNote } from './api';
+import { getNotes, createNote, updateNote, deleteNote, moveToTrash, archiveNote, unarchiveNote, restoreNote } from './api';
 import NoteCard from './components/NoteCard';
 import NoteEditor from './components/NoteEditor';
 import LoginPage from './pages/LoginPage';
@@ -44,6 +44,18 @@ function Home() {
     else if (activeSection === 'reminders') filter = 'reminders';
     fetchNotes(filter);
   }, [activeSection]);
+  
+  // Schedula tutti i reminder quando le note vengono caricate (solo su Android)
+  useEffect(() => {
+    if (notes.length > 0 && 
+        typeof window !== 'undefined' && 
+        typeof window.scheduleAllReminders === 'function') {
+      // Aspetta un po' per assicurarsi che il bridge sia completamente caricato
+      setTimeout(() => {
+        window.scheduleAllReminders(notes);
+      }, 1000);
+    }
+  }, [notes]);
 
   const fetchNotes = async (filter = 'all') => {
     try {
@@ -59,26 +71,64 @@ function Home() {
   };
 
   const checkOverdueReminders = (notesList) => {
-    const now = new Date();
+    const now = Date.now();
     const overdue = notesList.filter(note => {
       if (!note.reminder_date) return false;
-      const reminderDate = new Date(note.reminder_date);
-      return reminderDate <= now;
+      try {
+        const reminderDate = new Date(note.reminder_date).getTime();
+        return reminderDate <= now;
+      } catch (e) {
+        console.error('Error parsing reminder date:', e);
+        return false;
+      }
     });
 
     if (overdue.length > 0) {
       setOverdueReminders(overdue);
       setShowOverdueAlert(true);
+    } else {
+      setOverdueReminders([]);
+      setShowOverdueAlert(false);
     }
   };
 
   const handleSaveNote = async (note) => {
     try {
+      let savedNote;
       if (note.id) {
-        await updateNote(note.id, note);
+        // Cancella reminder precedente se esisteva
+        if (typeof window !== 'undefined' && 
+            typeof window.AndroidNotificationBridge !== 'undefined' &&
+            typeof window.AndroidNotificationBridge.cancelReminder === 'function') {
+          window.AndroidNotificationBridge.cancelReminder(note.id);
+        }
+        const response = await updateNote(note.id, note);
+        savedNote = response.data.data;
       } else {
-        await createNote(note);
+        const response = await createNote(note);
+        savedNote = response.data.data;
       }
+      
+      // Schedula o mostra reminder su Android se presente
+      if (note.reminder_date && 
+          typeof window !== 'undefined' && 
+          typeof window.AndroidNotificationBridge !== 'undefined' &&
+          typeof window.AndroidNotificationBridge.scheduleReminder === 'function') {
+        const noteId = savedNote?.id || note.id || Date.now();
+        const title = note.title || 'Reminder';
+        const body = note.content || 'You have a reminder';
+        const reminderDate = new Date(note.reminder_date).getTime();
+        const now = Date.now();
+        
+        // Se il reminder è nel futuro, schedula; altrimenti mostra immediatamente
+        if (reminderDate > now) {
+          window.AndroidNotificationBridge.scheduleReminder(title, body, noteId, note.reminder_date);
+        } else if (window.AndroidNotificationBridge.hasPermission()) {
+          // Se è già scaduto, mostra immediatamente
+          window.AndroidNotificationBridge.showNotification(title, body.substring(0, 200), noteId);
+        }
+      }
+      
       let filter = 'all';
       if (activeSection === 'archive') filter = 'archived';
       else if (activeSection === 'trash') filter = 'trash';
@@ -165,7 +215,7 @@ function Home() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {permission !== 'granted' && (
+              {permission !== 'granted' && typeof window.AndroidNotificationBridge === 'undefined' && (
                 <button
                   onClick={async () => {
                     const perm = await requestPermission();
