@@ -38,7 +38,14 @@ const NoteCard = ({ note, onDelete, onEdit, onArchive, onUnarchive, onRestore, a
                 {note.drawing_data && (
                     <div className="mt-4 rounded-lg overflow-hidden border border-keep-border/50 bg-white shadow-sm">
                         <img
-                            src={note.drawing_data}
+                            src={(() => {
+                                try {
+                                    const parsed = JSON.parse(note.drawing_data);
+                                    return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : note.drawing_data;
+                                } catch (e) {
+                                    return note.drawing_data;
+                                }
+                            })()}
                             alt="Handwritten Note"
                             className="w-full h-48 object-contain bg-white"
                         />

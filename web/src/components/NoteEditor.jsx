@@ -113,7 +113,14 @@ const NoteEditor = ({ onSave, onClose, initialNote }) => {
                     {drawingData && (
                         <div className="relative mb-4 group">
                             <img
-                                src={drawingData}
+                                src={(() => {
+                                    try {
+                                        const parsed = JSON.parse(drawingData);
+                                        return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : drawingData;
+                                    } catch (e) {
+                                        return drawingData;
+                                    }
+                                })()}
                                 alt="Drawing"
                                 className="w-full h-auto max-h-60 object-contain rounded-lg border border-white/10 bg-white"
                                 onClick={() => setShowDrawing(true)}
