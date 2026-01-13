@@ -8,12 +8,12 @@ const NoteCard = ({ note, onDelete, onEdit, onArchive, onUnarchive, onRestore, a
         const now = new Date();
         const diffMs = date - now;
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        
+
         if (diffDays < 0) return 'Overdue';
         if (diffDays === 0) return 'Today';
         if (diffDays === 1) return 'Tomorrow';
         if (diffDays < 7) return `In ${diffDays} days`;
-        
+
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
@@ -35,6 +35,15 @@ const NoteCard = ({ note, onDelete, onEdit, onArchive, onUnarchive, onRestore, a
             )}
             <div className="flex-1 mb-4">
                 <p className="text-base text-keep-text/90 whitespace-pre-wrap leading-relaxed font-light">{note.content}</p>
+                {note.drawing_data && (
+                    <div className="mt-4 rounded-lg overflow-hidden border border-keep-border/50 bg-white">
+                        <img
+                            src={note.drawing_data}
+                            alt="Handwritten Note"
+                            className="w-full h-auto max-h-48 object-contain"
+                        />
+                    </div>
+                )}
             </div>
 
             <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-between mt-auto pt-2 border-t border-transparent group-hover:border-white/10">
@@ -55,10 +64,10 @@ const NoteCard = ({ note, onDelete, onEdit, onArchive, onUnarchive, onRestore, a
                     {activeSection !== 'trash' && (
                         <IconButton icon={<FaEdit />} onClick={() => onEdit(note)} title="Edit" />
                     )}
-                    <IconButton 
-                        icon={<FaTrash />} 
-                        onClick={() => onDelete(note.id)} 
-                        title={activeSection === 'trash' ? 'Delete permanently' : 'Move to trash'} 
+                    <IconButton
+                        icon={<FaTrash />}
+                        onClick={() => onDelete(note.id)}
+                        title={activeSection === 'trash' ? 'Delete permanently' : 'Move to trash'}
                     />
                 </div>
             </div>

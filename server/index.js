@@ -91,7 +91,7 @@ app.put('/users/:id/password', verifyToken, async (req, res) => {
 app.get('/notes', verifyToken, (req, res) => {
     const { filter } = req.query; // 'all', 'archived', 'trash', 'reminders'
     let sql = "SELECT * FROM notes WHERE user_id = ? AND deleted = 0";
-    
+
     if (filter === 'archived') {
         sql += " AND archived = 1";
     } else if (filter === 'trash') {
@@ -102,9 +102,9 @@ app.get('/notes', verifyToken, (req, res) => {
         // Default: show non-archived, non-deleted notes
         sql += " AND archived = 0";
     }
-    
+
     sql += " ORDER BY reminder_date ASC, id DESC";
-    
+
     db.all(sql, [req.user.id], (err, rows) => {
         if (err) {
             res.status(400).json({ "error": err.message });
@@ -119,9 +119,9 @@ app.get('/notes', verifyToken, (req, res) => {
 
 // Create a new note
 app.post('/notes', verifyToken, (req, res) => {
-    const { title, content, color, reminder_date } = req.body;
-    const sql = 'INSERT INTO notes (user_id, title, content, color, reminder_date) VALUES (?,?,?,?,?)';
-    const params = [req.user.id, title, content, color || '#ffffff', reminder_date || null];
+    const { title, content, color, reminder_date, drawing_data } = req.body;
+    const sql = 'INSERT INTO notes (user_id, title, content, color, reminder_date, drawing_data) VALUES (?,?,?,?,?,?)';
+    const params = [req.user.id, title, content, color || '#ffffff', reminder_date || null, drawing_data || null];
     db.run(sql, params, function (err, result) {
         if (err) {
             res.status(400).json({ "error": err.message })
@@ -129,23 +129,24 @@ app.post('/notes', verifyToken, (req, res) => {
         }
         res.json({
             "message": "success",
-            "data": { id: this.lastID, user_id: req.user.id, title, content, color, reminder_date: reminder_date || null }
+            "data": { id: this.lastID, user_id: req.user.id, title, content, color, reminder_date: reminder_date || null, drawing_data: drawing_data || null }
         })
     });
 });
 
 // Update a note (Ensure ownership)
 app.put('/notes/:id', verifyToken, (req, res) => {
-    const { title, content, color, archived, deleted, reminder_date } = req.body;
+    const { title, content, color, archived, deleted, reminder_date, drawing_data } = req.body;
     const sql = `UPDATE notes SET 
                  title = COALESCE(?,title), 
                  content = COALESCE(?,content), 
                  color = COALESCE(?,color),
                  archived = COALESCE(?,archived),
                  deleted = COALESCE(?,deleted),
-                 reminder_date = ?
+                 reminder_date = ?,
+                 drawing_data = COALESCE(?,drawing_data)
                  WHERE id = ? AND user_id = ?`;
-    const params = [title, content, color, archived, deleted, reminder_date || null, req.params.id, req.user.id];
+    const params = [title, content, color, archived, deleted, reminder_date || null, drawing_data, req.params.id, req.user.id];
     db.run(sql, params, function (err, result) {
         if (err) {
             res.status(400).json({ "error": err.message })

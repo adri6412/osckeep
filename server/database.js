@@ -68,6 +68,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
         db.run(`ALTER TABLE notes ADD COLUMN reminder_date DATETIME`, (err) => {
             if (err && !err.message.includes('duplicate column')) console.error('Error adding reminder_date column', err);
         });
+        db.run(`ALTER TABLE notes ADD COLUMN drawing_data TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column')) console.error('Error adding drawing_data column', err);
+        });
     }
 });
 

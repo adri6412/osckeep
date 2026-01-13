@@ -3,6 +3,13 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// Disabilita il task clean per evitare problemi su Windows con file bloccati
+tasks.whenTaskAdded { task ->
+    if (task.name == 'clean') {
+        task.enabled = false
+    }
+}
+
 android {
     namespace 'com.example.keepclone'
     compileSdk 34
