@@ -12,18 +12,7 @@ const HandwritingCanvas = ({ initialData, onSave, color = '#000000' }) => {
     const [penWidth, setPenWidth] = useState(2);
 
     // Multi-page State
-    const [pages, setPages] = useState(['']); // Array of data URLs
-    const [currentPageIndex, setCurrentPageIndex] = useState(0);
-
-    // History for Undo/Redo (Per Page)
-    const [history, setHistory] = useState([]);
-    const [historyStep, setHistoryStep] = useState(-1);
-
-    const colors = ['#000000', '#FF0000', '#0000FF', '#008000', '#FFA500'];
-    const widths = [2, 5, 10];
-
-    useEffect(() => {
-        // Parse initialData
+    const [pages, setPages] = useState(() => {
         let loadedPages = [''];
         if (initialData) {
             try {
@@ -37,9 +26,16 @@ const HandwritingCanvas = ({ initialData, onSave, color = '#000000' }) => {
                 loadedPages = [initialData]; // Legacy single string
             }
         }
-        setPages(loadedPages);
-        setCurrentPageIndex(0);
-    }, []);
+        return loadedPages;
+    }); // Array of data URLs
+    const [currentPageIndex, setCurrentPageIndex] = useState(0);
+
+    // History for Undo/Redo (Per Page)
+    const [history, setHistory] = useState([]);
+    const [historyStep, setHistoryStep] = useState(-1);
+
+    const colors = ['#000000', '#FF0000', '#0000FF', '#008000', '#FFA500'];
+    const widths = [2, 5, 10];
 
     // Load content when page index changes
     useEffect(() => {
