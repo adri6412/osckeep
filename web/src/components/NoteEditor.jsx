@@ -144,7 +144,7 @@ const NoteEditor = ({ onSave, onClose, initialNote }) => {
                                 <div className="flex-1 relative bg-white">
                                     <HandwritingCanvas
                                         initialData={drawingData}
-                                        onSave={handleDrawingSave}
+                                        onSave={setDrawingData}
                                         color={color}
                                     />
                                 </div>

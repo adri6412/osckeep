@@ -33,8 +33,8 @@ const NoteCard = ({ note, onDelete, onEdit, onArchive, onUnarchive, onRestore, a
                     <h3 className="text-lg font-semibold text-keep-text tracking-tight leading-snug">{note.title}</h3>
                 </div>
             )}
-            <div className="flex-1 mb-4">
-                <p className="text-base text-keep-text/90 whitespace-pre-wrap leading-relaxed font-light">{note.content}</p>
+            <div className="flex-1 mb-4 overflow-hidden">
+                <p className="text-base text-keep-text/90 whitespace-pre-wrap leading-relaxed font-light break-words overflow-hidden text-ellipsis">{note.content}</p>
                 {note.drawing_data && (
                     <div className="mt-4 rounded-lg overflow-hidden border border-keep-border/50 bg-white shadow-sm">
                         <img
