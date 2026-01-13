@@ -39,8 +39,8 @@ const HandwritingCanvas = ({ initialData, onSave, color = '#ffffff' }) => {
     };
 
     return (
-        <div className="flex flex-col gap-2 w-full h-full" ref={containerRef}>
-            <div className="flex gap-2 mb-2 items-center">
+        <div className="flex flex-col w-full h-full" ref={containerRef}>
+            <div className="flex gap-2 mb-2 items-center flex-shrink-0">
                 <button
                     onClick={() => setIsErasing(false)}
                     className={`p-2 rounded ${!isErasing ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-300'}`}
@@ -55,6 +55,7 @@ const HandwritingCanvas = ({ initialData, onSave, color = '#ffffff' }) => {
                 >
                     <FaEraser />
                 </button>
+                {/* Color pickers could go here */}
                 <button
                     onClick={handleClear}
                     className="p-2 rounded bg-red-600 text-white ml-auto"
@@ -64,20 +65,16 @@ const HandwritingCanvas = ({ initialData, onSave, color = '#ffffff' }) => {
                 </button>
             </div>
 
-            <div className="border border-gray-600 rounded bg-white overflow-hidden" style={{ minHeight: '300px', height: '100%' }}>
+            <div className="border border-gray-600 rounded bg-white overflow-hidden flex-1 relative">
                 <SignatureCanvas
                     ref={sigCanvas}
                     penColor={isErasing ? '#ffffff' : penColor}
                     canvasProps={{
                         className: 'signatureCanvas w-full h-full',
-                        style: { width: '100%', height: '100%', minHeight: '300px' }
+                        style: { width: '100%', height: '100%' }
                     }}
                     onEnd={handleEnd}
-                    backgroundColor="#ffffff" // Always white background for consistency? Or transparent?
-                // Note: If transparent, dark mode might break visibility of black ink.
-                // For now, let's keep it simple: White canvas even in dark mode, or adapt.
-                // Ideally, we want transparent, but then we need to handle ink color for both modes.
-                // Let's stick to White canvas for now to emulate "paper".
+                    backgroundColor="#ffffff"
                 />
             </div>
         </div>

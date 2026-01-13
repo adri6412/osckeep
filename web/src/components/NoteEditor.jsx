@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaPalette, FaImage, FaArchive, FaUndo, FaRedo, FaCheck, FaRegBell, FaPen } from 'react-icons/fa';
+import { FaPalette, FaImage, FaArchive, FaUndo, FaRedo, FaCheck, FaRegBell, FaPen, FaTrash } from 'react-icons/fa';
 import HandwritingCanvas from './HandwritingCanvas';
 
 const NoteEditor = ({ onSave, onClose, initialNote }) => {
@@ -11,7 +11,7 @@ const NoteEditor = ({ onSave, onClose, initialNote }) => {
     const [showReminderPicker, setShowReminderPicker] = useState(false);
     const [isExpanded, setIsExpanded] = useState(!!initialNote);
     const [drawingData, setDrawingData] = useState(initialNote?.drawing_data || '');
-    const [showDrawing, setShowDrawing] = useState(!!initialNote?.drawing_data);
+    const [showDrawing, setShowDrawing] = useState(false);
     const wrapperRef = useRef(null);
 
     // Premium Dark Mode Palette
@@ -64,6 +64,14 @@ const NoteEditor = ({ onSave, onClose, initialNote }) => {
         if (onClose) onClose();
     };
 
+    const handleDrawingSave = (data) => {
+        setDrawingData(data);
+        // Do not close drawing mode automatically if we want to keep it open, 
+        // but user asked for "save -> shrinks and adds to note".
+        // So we close the full screen mode here.
+        setShowDrawing(false);
+    };
+
     const handleRemoveReminder = () => {
         setReminderDate('');
         setReminderTime('');
@@ -103,14 +111,46 @@ const NoteEditor = ({ onSave, onClose, initialNote }) => {
                         className="w-full bg-transparent text-keep-text text-[clamp(1rem,1.25vw,1.125rem)] placeholder-keep-muted/70 outline-none resize-none min-h-[clamp(4rem,10vw,6rem)] leading-relaxed py-[clamp(0.5rem,1vw,0.75rem)]"
                     />
 
-                    {/* Drawing Area */}
-                    {showDrawing && (
-                        <div className="mb-4 h-64 sm:h-80 w-full">
-                            <HandwritingCanvas
-                                initialData={drawingData}
-                                onSave={setDrawingData}
-                                color={color} // Pass Note color to canvas if needed, or just keep white/black
+                    {/* Drawing Preview Area */}
+                    {drawingData && (
+                        <div className="relative mb-4 group">
+                            <img
+                                src={drawingData}
+                                alt="Drawing"
+                                className="w-full h-auto max-h-60 object-contain rounded-lg border border-white/10 bg-white"
+                                onClick={() => setShowDrawing(true)}
                             />
+                            <button
+                                onClick={() => setDrawingData('')}
+                                className="absolute top-2 right-2 p-2 bg-red-500 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Remove Drawing"
+                            >
+                                <FaTrash />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Fullscreen Drawing Modal */}
+                    {showDrawing && (
+                        <div className="fixed inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center p-4">
+                            <div className="w-full h-full max-w-7xl max-h-[90vh] bg-white rounded-xl overflow-hidden flex flex-col">
+                                <div className="p-2 border-b flex justify-between items-center bg-gray-100 dark:bg-gray-800">
+                                    <h3 className="font-semibold text-gray-700 dark:text-gray-200">Drawing</h3>
+                                    <button
+                                        onClick={() => setShowDrawing(false)}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                                    >
+                                        Done
+                                    </button>
+                                </div>
+                                <div className="flex-1 relative bg-white">
+                                    <HandwritingCanvas
+                                        initialData={drawingData}
+                                        onSave={handleDrawingSave}
+                                        color={color}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -158,9 +198,9 @@ const NoteEditor = ({ onSave, onClose, initialNote }) => {
                             )}
 
                             <button
-                                onClick={() => setShowDrawing(!showDrawing)}
-                                className={`p-[clamp(0.5rem,1vw,0.75rem)] rounded-lg transition-colors ${showDrawing ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-black/20 text-keep-text/70'}`}
-                                title="Toggle Drawing"
+                                onClick={() => setShowDrawing(true)}
+                                className={`p-[clamp(0.5rem,1vw,0.75rem)] rounded-lg transition-colors ${drawingData ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-black/20 text-keep-text/70'}`}
+                                title={drawingData ? "Edit Drawing" : "Add Drawing"}
                             >
                                 <FaPen />
                             </button>
