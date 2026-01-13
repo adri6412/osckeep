@@ -66,10 +66,8 @@ const NoteEditor = ({ onSave, onClose, initialNote }) => {
 
     const handleDrawingSave = (data) => {
         setDrawingData(data);
-        // Do not close drawing mode automatically if we want to keep it open, 
-        // but user asked for "save -> shrinks and adds to note".
-        // So we close the full screen mode here.
-        setShowDrawing(false);
+        // Do not close drawing mode automatically.
+        // The user must click "Done" to close the modal.
     };
 
     const handleRemoveReminder = () => {
