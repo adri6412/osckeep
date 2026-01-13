@@ -156,44 +156,40 @@ const NoteEditor = ({ onSave, onClose, initialNote }) => {
                                     {new Date(reminderDate + (reminderTime ? `T${reminderTime}` : '')).toLocaleString()}
                                 </span>
                             )}
-                            {new Date(reminderDate + (reminderTime ? `T${reminderTime}` : '')).toLocaleString()}
-                        </span>
-                            )}
 
-                        <button
-                            onClick={() => setShowDrawing(!showDrawing)}
-                            className={`p-[clamp(0.5rem,1vw,0.75rem)] rounded-lg transition-colors ${showDrawing ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-black/20 text-keep-text/70'}`}
-                            title="Toggle Drawing"
-                        >
-                            <FaPen />
-                        </button>
-                    </div>
-
-                    {/* Color Picker and Close Button */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-[clamp(1rem,2vw,1.5rem)]">
-                        <div className="flex gap-[clamp(0.5rem,1vw,0.75rem)] flex-wrap">
-                            {colors.map(c => (
-                                <button
-                                    key={c}
-                                    onClick={() => setColor(c)}
-                                    className={`w-[clamp(1.75rem,3.5vw,2rem)] h-[clamp(1.75rem,3.5vw,2rem)] rounded-full border border-white/20 hover:scale-110 transition-transform ${color === c ? 'ring-2 ring-white' : ''}`}
-                                    style={{ backgroundColor: c }}
-                                    title={c}
-                                />
-                            ))}
+                            <button
+                                onClick={() => setShowDrawing(!showDrawing)}
+                                className={`p-[clamp(0.5rem,1vw,0.75rem)] rounded-lg transition-colors ${showDrawing ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-black/20 text-keep-text/70'}`}
+                                title="Toggle Drawing"
+                            >
+                                <FaPen />
+                            </button>
                         </div>
-                        <button
-                            onClick={handleClose}
-                            className="px-[clamp(1.5rem,3vw,2rem)] py-[clamp(0.75rem,1.5vw,1rem)] text-[clamp(0.875rem,1.25vw,1rem)] font-semibold text-keep-bg bg-keep-text hover:bg-white rounded-lg transition-colors shadow-md w-full sm:w-auto"
-                        >
-                            Close
-                        </button>
+
+                        {/* Color Picker and Close Button */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-[clamp(1rem,2vw,1.5rem)]">
+                            <div className="flex gap-[clamp(0.5rem,1vw,0.75rem)] flex-wrap">
+                                {colors.map(c => (
+                                    <button
+                                        key={c}
+                                        onClick={() => setColor(c)}
+                                        className={`w-[clamp(1.75rem,3.5vw,2rem)] h-[clamp(1.75rem,3.5vw,2rem)] rounded-full border border-white/20 hover:scale-110 transition-transform ${color === c ? 'ring-2 ring-white' : ''}`}
+                                        style={{ backgroundColor: c }}
+                                        title={c}
+                                    />
+                                ))}
+                            </div>
+                            <button
+                                onClick={handleClose}
+                                className="px-[clamp(1.5rem,3vw,2rem)] py-[clamp(0.75rem,1.5vw,1rem)] text-[clamp(0.875rem,1.25vw,1rem)] font-semibold text-keep-bg bg-keep-text hover:bg-white rounded-lg transition-colors shadow-md w-full sm:w-auto"
+                            >
+                                Close
+                            </button>
+                        </div>
                     </div>
                 </div>
-                </div>
-    )
-}
-        </div >
+            )}
+        </div>
     );
 };
 
